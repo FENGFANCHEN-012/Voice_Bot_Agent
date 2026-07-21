@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Singapore Tourist Helper Bot</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364e2ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M12 3v6'/><path d='M8.5 7.5a5 5 0 1 0 7 0'/><path d='M6 15c1.5-2 3.7-3 6-3s4.5 1 6 3'/></svg>">
+    <style>
+        :root {
+            --hue: 190;
+            --sat: 100%;
+            --lum: 70%;
+            --accent: hsl(var(--hue), var(--sat), var(--lum));
+            --accent-dim: hsl(var(--hue), var(--sat), calc(var(--lum) - 25%));
+            --accent-bg: hsla(var(--hue), var(--sat), var(--lum), 0.12);
+            --accent-bg-strong: hsla(var(--hue), var(--sat), var(--lum), 0.22);
+            --accent-shadow: hsla(var(--hue), var(--sat), var(--lum), 0.25);
+            --bg: #07111f;
+            --bg-2: #0d1a2d;
+            --panel: rgba(10, 18, 34, 0.72);
+            --panel-strong: rgba(13, 26, 45, 0.9);
+            --line: rgba(255, 255, 255, 0.09);
+            --text: #ecf4ff;
+            --muted: rgba(236, 244, 255, 0.65);
+            --shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+            --radius-xl: 28px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-sm: 12px;
+            --max: 520px;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            height: 100%;
+            font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 20% 20%, hsla(var(--hue), var(--sat), var(--lum), 0.18), transparent 25%),
+                radial-gradient(circle at 80% 10%, hsla(calc(var(--hue) + 40), var(--sat), var(--lum), 0.16), transparent 22%),
+                radial-gradient(circle at 80% 80%, hsla(calc(var(--hue) + 120), var(--sat), 50%, 0.12), transparent 25%),
+                linear-gradient(160deg, var(--bg), var(--bg-2));
+            background-attachment: fixed;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .noise {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.06;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+            background-size: 72px 72px;
+            mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+        }
+
+        .app {
+            position: relative;
+            width: min(100%, var(--max));
+            height: min(100dvh, 820px);
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-xl);
+            background: var(--panel);
+            backdrop-filter: blur(24px);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .app-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
+            flex-shrink: 0;
+        }
+
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-brand-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: url('/asset/pexels-realcereal-15480459.jpg') center/cover no-repeat;
+            border: 1px solid var(--line);
+        }
+
+        .app-brand h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .app-brand span {
+            color: var(--muted);
+            font-size: 0.78rem;
+        }
+
+        .theme-picker {
+            position: relative;
+        }
+
+        .theme-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--line);
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 180ms ease, box-shadow 180ms ease;
+            padding: 0;
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--accent-shadow);
+        }
+
+        .theme-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--panel-strong);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            padding: 8px;
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            z-index: 100;
+            min-width: 116px;
+        }
+
+        .theme-dropdown.open {
+            display: grid;
+        }
+
+        .theme-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: transform 120ms ease;
+        }
+
+        .theme-swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .theme-swatch.active {
+            border-color: var(--text);
+        }
+
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: var(--line);
+            border-radius: 99px;
+        }
+
+        .msg {
+            display: flex;
+            gap: 10px;
+            max-width: 88%;
+            animation: msgIn 240ms ease both;
+        }
+
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(10px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+        }
+
+        .msg-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border: 1px solid var(--line);
+        }
+
+        .msg.user .msg-avatar {
+            background: var(--accent-bg-strong);
+            color: var(--accent);
+        }
+
+        .msg.bot .msg-avatar {
+            background: rgba(255,255,255,0.07);
+            color: var(--muted);
+        }
+
+        .msg-avatar svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .msg-body {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .msg-bubble {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.92rem;
+            line-height: 1.55;
+            word-break: break-word;
+        }
+
+        .msg.user .msg-bubble {
+            background: var(--accent);
+            color: #07111f;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.bot .msg-bubble {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid var(--line);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-meta {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .msg.user .msg-meta {
+            justify-content: flex-end;
+        }
+
+        .msg-time {
+            font-size: 0.7rem;
+            color: var(--muted);
+            opacity: 0.7;
+        }
+
+        .msg-status {
+            width: 14px;
+            height: 14px;
+        }
+
+        .msg-status svg {
+            width: 100%;
+            height: 100%;
+            fill: none;
+            stroke: var(--accent);
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .msg-bubble .voice-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.82rem;
+        }
+
+        .msg-bubble .voice-badge svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .msg.bot .msg-bubble .voice-badge {
+            color: var(--accent);
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 0;
+        }
+
+        .typing-indicator span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--muted);
+            animation: typingBounce 1.2s ease-in-out infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        /* SENDING (outgoing) message pulse */
+        .msg.user.sending .msg-bubble {
+            animation: sendPulse 0.6s ease;
+        }
+
+        @keyframes sendPulse {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        /* RECEPTION (incoming) accent glow */
+        .msg.bot.received .msg-bubble {
+            border-color: var(--accent);
+            box-shadow: 0 0 16px var(--accent-shadow);
+        }
+
+        .input-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            border-top: 1px solid var(--line);
+            flex-shrink: 0;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .input-field {
+            flex: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            font: inherit;
+            font-size: 0.9rem;
+            color: var(--text);
+            outline: none;
+            transition: border-color 180ms ease, box-shadow 180ms ease;
+        }
+
+        .input-field::placeholder {
+            color: var(--muted);
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-dim);
+            box-shadow: 0 0 0 3px var(--accent-bg);
+        }
+
+        .mic-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 0;
+            background: var(--accent);
+            color: #07111f;
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+            position: relative;
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.06);
+            box-shadow: 0 0 24px var(--accent-shadow);
+        }
+
+        .mic-btn.recording {
+            background: #ef4444;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5);
+            animation: recPulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes recPulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+            70% { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .mic-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.06);
+            color: var(--text);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            transition: transform 180ms ease, background 180ms ease;
+        }
+
+        .send-btn:hover {
+            background: rgba(255,255,255,0.12);
+            transform: scale(1.06);
+        }
+
+        .send-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .recording-bar {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            border-top: 1px solid var(--line);
+            flex-shrink: 0;
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .recording-bar.active {
+            display: flex;
+        }
+
+        .recording-bar .rec-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: recPulse 0.8s ease-in-out infinite;
+        }
+
+        .recording-bar .rec-label {
+            font-size: 0.85rem;
+            color: #ef4444;
+            flex: 1;
+        }
+
+        .recording-bar .rec-wave {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            height: 24px;
+        }
+
+        .recording-bar .rec-wave span {
+            width: 3px;
+            border-radius: 99px;
+            background: #ef4444;
+            animation: waveAnim 0.5s ease-in-out infinite alternate;
+        }
+
+        .recording-bar .rec-wave span:nth-child(1) { height: 8px; animation-delay: 0ms; }
+        .recording-bar .rec-wave span:nth-child(2) { height: 16px; animation-delay: 80ms; }
+        .recording-bar .rec-wave span:nth-child(3) { height: 22px; animation-delay: 160ms; }
+        .recording-bar .rec-wave span:nth-child(4) { height: 14px; animation-delay: 240ms; }
+        .recording-bar .rec-wave span:nth-child(5) { height: 6px; animation-delay: 320ms; }
+
+        @keyframes waveAnim {
+            from { transform: scaleY(0.5); }
+            to { transform: scaleY(1); }
+        }
+
+        .recording-bar .rec-cancel {
+            background: none;
+            border: 0;
+            color: var(--muted);
+            cursor: pointer;
+            padding: 4px;
+            display: grid;
+            place-items: center;
+        }
+
+        .recording-bar .rec-cancel svg {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .empty-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: var(--muted);
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .empty-chat-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: url('/asset/pexels-realcereal-15480459.jpg') center/cover no-repeat;
+            border: 1px solid var(--line);
+        }
+
+        .empty-chat h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .empty-chat p {
+            margin: 0;
+            font-size: 0.88rem;
+            max-width: 28ch;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 540px) {
+            .app {
+                height: 100dvh;
+                border-radius: 0;
+                border: 0;
+            }
+            .chat-area {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="noise"></div>
+
+    <div class="app">
+        <header class="app-header">
+            <div class="app-brand">
+                <div class="app-brand-icon"></div>
+                <div>
+                    <h1>Singapore Tourist Helper Bot</h1>
+                    <span>Online</span>
+                </div>
+            </div>
+            <div class="theme-picker">
+                <button class="theme-btn" id="themeBtn" title="Change theme color"></button>
+                <div class="theme-dropdown" id="themeDropdown">
+                    <button class="theme-swatch active" data-hue="190" style="background:hsl(190,100%,70%)" title="Cyan"></button>
+                    <button class="theme-swatch" data-hue="270" style="background:hsl(270,100%,70%)" title="Purple"></button>
+                    <button class="theme-swatch" data-hue="340" style="background:hsl(340,100%,70%)" title="Pink"></button>
+                    <button class="theme-swatch" data-hue="45" style="background:hsl(45,100%,60%)" title="Gold"></button>
+                    <button class="theme-swatch" data-hue="150" style="background:hsl(150,100%,60%)" title="Green"></button>
+                    <button class="theme-swatch" data-hue="0" style="background:hsl(0,100%,65%)" title="Red"></button>
+                </div>
+            </div>
+        </header>
+
+        <div class="chat-area" id="chatArea">
+            <div class="empty-chat" id="emptyChat">
+                <div class="empty-chat-icon"></div>
+                <h2>Ready to talk</h2>
+                <p>You can ask me anything about the tour of Singapore.</p>
+            </div>
+        </div>
+
+        <div class="recording-bar" id="recordingBar">
+            <span class="rec-dot"></span>
+            <span class="rec-label">Recording&hellip;</span>
+            <div class="rec-wave">
+                <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <button class="rec-cancel" id="cancelBtn" title="Cancel recording">
+                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+            </button>
+        </div>
+
+        <div class="input-bar">
+            <input class="input-field" id="inputField" type="text" placeholder="Type a message&hellip;" autocomplete="off">
+          
+          
+            <button class="mic-btn" id="micBtn" title="Record voice message">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path>
+                    <path d="M5 11a7 7 0 0 0 14 0"></path>
+                    <path d="M12 19v3"></path>
+                </svg>
+            </button>
+
+
+            <button class="send-btn" id="sendBtn" title="Send message">
+                <svg viewBox="0 0 24 24">
+                    <path d="M22 2L11 13"></path>
+                    <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                </svg>
+            </button>
+        </div>
+        <audio id="audioPlayer" style="display:none"></audio>
+    </div>
+
+    <script>
+        const root = document.documentElement;
+        const themeBtn = document.getElementById('themeBtn');
+        const themeDropdown = document.getElementById('themeDropdown');
+        const swatches = document.querySelectorAll('.theme-swatch');
+        const chatArea = document.getElementById('chatArea');
+        const emptyChat = document.getElementById('emptyChat');
+        const inputField = document.getElementById('inputField');
+        const sendBtn = document.getElementById('sendBtn');
+        const micBtn = document.getElementById('micBtn');
+        const recordingBar = document.getElementById('recordingBar');
+        const cancelBtn = document.getElementById('cancelBtn');
+        
+        let isRecording = false;
+
+        // for recording purpose
+        let stream = null;
+
+        // ---- Theme picker ----
+        themeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            themeDropdown.classList.toggle('open');
+        });
+
+        document.addEventListener('click', () => {
+            themeDropdown.classList.remove('open');
+        });
+
+        swatches.forEach((swatch) => {
+            swatch.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const hue = swatch.dataset.hue;
+                root.style.setProperty('--hue', hue);
+                swatches.forEach((s) => s.classList.remove('active'));
+                swatch.classList.add('active');
+                themeDropdown.classList.remove('open');
+            });
+        });
+
+        // ---- Scroll to bottom ----
+        function scrollBottom() {
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // ---- Add a message ----
+        function addMessage(type, text, extraClass = '') {
+            emptyChat.style.display = 'none';
+
+            const now = new Date();
+            const time = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+            const div = document.createElement('div');
+            div.className = 'msg ' + type + ' ' + extraClass;
+
+            const isUser = type === 'user';
+            const avatarLabel = isUser ? 'U' : 'B';
+            const avatarIcon = isUser
+                ? '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'
+                : '<svg viewBox="0 0 24 24"><path d="M12 3v6"></path><path d="M8.5 7.5a5 5 0 1 0 7 0"></path><path d="M6 15c1.5-2 3.7-3 6-3s4.5 1 6 3"></path></svg>';
+
+            const voiceBadge = '<span class="voice-badge"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3Z"></path><path d="M5 11a7 7 0 0 0 14 0"></path><path d="M12 19v3"></path></svg> Voice</span>';
+
+            div.innerHTML = `
+                <div class="msg-avatar">${avatarIcon}</div>
+                <div class="msg-body">
+                    <div class="msg-bubble">${voiceBadge} ${text}</div>
+                    <div class="msg-meta">
+                        <span class="msg-time">${time}</span>
+                        ${isUser ? '<span class="msg-status"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg></span>' : ''}
+                    </div>
+                </div>
+            `;
+
+            chatArea.appendChild(div);
+            scrollBottom();
+        }
+
+        // ---- Show typing / loading indicator ----
+        function showTyping() {
+            emptyChat.style.display = 'none';
+            const existing = document.getElementById('typingMsg');
+            if (existing) return;
+
+            const div = document.createElement('div');
+            div.className = 'msg bot';
+            div.id = 'typingMsg';
+            div.innerHTML = `
+                <div class="msg-avatar"><svg viewBox="0 0 24 24"><path d="M12 3v6"></path><path d="M8.5 7.5a5 5 0 1 0 7 0"></path><path d="M6 15c1.5-2 3.7-3 6-3s4.5 1 6 3"></path></svg></div>
+                <div class="msg-body">
+                    <div class="msg-bubble">
+                        <div class="typing-indicator"><span></span><span></span><span></span></div>
+                    </div>
+                </div>
+            `;
+            chatArea.appendChild(div);
+            scrollBottom();
+        }
+
+        function removeTyping() {
+            const el = document.getElementById('typingMsg');
+            if (el) el.remove();
+        }
+
+        // ---- Send text message to backend ----
+        async function sendMessage(text) {
+            if (!text.trim()) return;
+            inputField.value = '';
+            addMessage('user', text, 'sending');
+
+            setTimeout(() => {
+                chatArea.querySelectorAll('.msg.user.sending').forEach((m) => m.classList.remove('sending'));
+            }, 600);
+
+            showTyping();
+
+            try {
+                const res = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                removeTyping();
+                if (data.error) {
+                    addMessage('bot', 'Error: ' + data.error, 'received');
+                    console.error('Backend error:', data.error);
+                } else {
+                    addMessage('bot', data.response || '(no response)', 'received');
+                    if (data.audio_url) playAudio(data.audio_url);
+                }
+                setTimeout(() => {
+                    chatArea.querySelectorAll('.msg.bot.received').forEach((m) => m.classList.remove('received'));
+                }, 1000);
+            } catch (err) {
+                removeTyping();
+                addMessage('bot', 'Error: ' + err.message, 'received');
+                console.error('Fetch error:', err);
+            }
+        }
+
+        sendBtn.addEventListener('click', () => sendMessage(inputField.value));
+        inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage(inputField.value);
+        });
+
+        // ---- Play bot audio ----
+        function playAudio(url) {
+            const player = document.getElementById('audioPlayer');
+            player.src = url;
+            player.play().catch(() => {});
+        }
+
+        // ---- MediaRecorder state (module-level) ----
+        let mediaRecorder = null;
+        let audioChunks = [];
+
+        // ---- Mic recording ----
+        micBtn.addEventListener('click', () => {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        });
+
+        cancelBtn.addEventListener('click', stopRecording);
+
+        async function startRecording() {
+            isRecording = true;
+            micBtn.classList.add('recording');
+            recordingBar.classList.add('active');
+
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            isRecording = false;
+            micBtn.classList.remove('recording');
+            recordingBar.classList.remove('active');
+
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+                return;
+            }
+
+            mediaRecorder.onstop = async () => {
+                if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                if (blob.size === 0) return;
+
+                const fd = new FormData();
+                fd.append('audio', blob, 'voice-message.webm');
+
+                addMessage('user', 'Voice message', 'sending');
+                setTimeout(() => {
+                    chatArea.querySelectorAll('.msg.user.sending').forEach((m) => m.classList.remove('sending'));
+                }, 600);
+
+                showTyping();
+
+                try {
+                    const res = await fetch('/voice/send', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    removeTyping();
+                    if (data.error) {
+                        addMessage('bot', 'Error: ' + data.error, 'received');
+                        console.error('Backend error:', data.error);
+                    } else {
+                        addMessage('bot', data.message || '(no response)', 'received');
+                        if (data.audio_url) playAudio(data.audio_url);
+                    }
+                    setTimeout(() => {
+                        chatArea.querySelectorAll('.msg.bot.received').forEach((m) => m.classList.remove('received'));
+                    }, 1000);
+                } catch (err) {
+                    removeTyping();
+                    addMessage('bot', 'Error: ' + err.message, 'received');
+                    console.error('Fetch error:', err);
+                }
+            };
+
+            mediaRecorder.stop();
+        }
+    </script>
+</body>
+</html>
