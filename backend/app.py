@@ -56,23 +56,36 @@ async def ping():
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str | None = None
+    voice_profile: str = "default"
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "service": "voice-agent"}
 
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
     try:
-        reply = callLLM(req.message)
+        session_id = req.session_id or "default"
+        reply = callLLM(req.message, session_id=session_id)
         audio_filename = f"{uuid.uuid4()}.mp3"
         audio_path = os.path.join(AUDIO_DIR, audio_filename)
-        await text_to_speech(reply, audio_path)
-        return {"response": reply or "(no response)", "audio_url": f"/audio/{audio_filename}"}
+        await text_to_speech(reply, audio_path, voice_profile=req.voice_profile)
+        return {
+            "response": reply or "(no response)",
+            "audio_url": f"/audio/{audio_filename}",
+            "session_id": session_id,
+            "voice_profile": req.voice_profile,
+        }
     except Exception as e:
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
 @app.post("/voice/send")
-async def sendVoice(audio: UploadFile = File(...)):
+async def sendVoice(audio: UploadFile = File(...), session_id: str = "default", voice_profile: str = "default"):
     tmp = None
     try:
         content = await audio.read()
@@ -82,14 +95,22 @@ async def sendVoice(audio: UploadFile = File(...)):
             tmp = f.name
         text = audiototext(tmp)
         print(f"[User said]: {text}")
-        reply = callLLM(text)
+        reply = callLLM(text, session_id=session_id)
         audio_filename = f"{uuid.uuid4()}.mp3"
         audio_path = os.path.join(AUDIO_DIR, audio_filename)
-        await text_to_speech(reply, audio_path)
-        return {"message": reply or "(no response)", "audio_url": f"/audio/{audio_filename}"}
+        await text_to_speech(reply, audio_path, voice_profile=voice_profile)
+        return {
+            "message": reply or "(no response)",
+            "audio_url": f"/audio/{audio_filename}",
+            "session_id": session_id,
+            "voice_profile": voice_profile,
+        }
     except Exception as e:
         traceback.print_exc()
         return JSONResponse({"error": str(e)}, status_code=500)
     finally:
         if tmp and os.path.exists(tmp):
-            os.unlink(tmp)
+            try:
+                os.unlink(tmp)
+            except PermissionError:
+                pass
